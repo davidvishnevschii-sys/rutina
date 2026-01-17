@@ -5,14 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Утренняя рутина — прототип</title>
   
-  <!-- Максимальная кроссбраузерность и скрытие UI -->
   <meta name="theme-color" content="#1976d2">
   <meta name="description" content="Простой прототип утренней рутины">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
 
-  <!-- PWA манифест -->
   <link rel="manifest" href="./manifest.json">
 
   <style>
@@ -51,6 +49,7 @@
     .current-task h2 {
       font-size: 2rem;
       margin-bottom: 32px;
+      transition: all 0.3s;
     }
     .time { font-size: 1.1rem; color: #666; margin-bottom: 24px; }
     .buttons {
@@ -67,11 +66,20 @@
       color: white;
       cursor: pointer;
       transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
     }
     .btn-confirm { background: #4caf50; }
     .btn-skip    { background: #ff9800; }
     .btn-edit    { background: #2196f3; }
-    button:hover { opacity: 0.92; transform: translateY(-2px); }
+    button:active { transform: scale(0.95); }
+
+    /* Анимация успешного действия */
+    @keyframes successPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
 
     .side-drawer {
       position: fixed;
@@ -107,15 +115,30 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      transition: all 0.3s;
     }
     .task-item:last-child { border-bottom: none; }
 
     .status-todo    { color: #9e9e9e; }
-    .status-current { color: #000; font-weight: 700; background: #f0f8ff; padding: 4px 8px; border-radius: 8px; }
-    .status-done    { color: #1976d2; }
-    .status-skipped { color: #757575; text-decoration: line-through; }
-    .status-edited  { color: #000; }
-    .status-edited::before { content: "✏️ "; font-size: 1.2rem; }
+    .status-current { 
+      color: #000; 
+      font-weight: 700; 
+      background: #f0f8ff; 
+      padding: 4px 8px; 
+      border-radius: 8px;
+      animation: successPulse 0.5s;
+    }
+    .status-done    { 
+      color: #4caf50; 
+      text-decoration: line-through;
+      opacity: 0.7;
+    }
+    .status-skipped { 
+      color: #ff9800; 
+      text-decoration: line-through;
+      opacity: 0.7;
+    }
+    .status-edited  { color: #2196f3; }
 
     .task-list::after {
       content: "";
@@ -136,6 +159,99 @@
       z-index: 9;
     }
     .overlay.open { opacity: 1; pointer-events: auto; }
+
+    /* Тост-уведомления */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(200px);
+      background: #323232;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      font-size: 1rem;
+      z-index: 1000;
+      transition: transform 0.3s ease-out;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast.success { background: #4caf50; }
+    .toast.warning { background: #ff9800; }
+    .toast.info { background: #2196f3; }
+
+    /* Анимация завершения */
+    .completed-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(76, 175, 80, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1001;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+    .completed-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .completed-overlay h1 {
+      color: white;
+      font-size: 3rem;
+      margin-bottom: 20px;
+    }
+    .completed-overlay p {
+      color: white;
+      font-size: 1.3rem;
+    }
+
+    /* Модальное окно редактирования */
+    .edit-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      width: 90%;
+      max-width: 400px;
+      z-index: 1002;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .edit-modal.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .edit-modal h3 {
+      margin-bottom: 16px;
+      color: #333;
+    }
+    .edit-modal input {
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .edit-modal-buttons {
+      display: flex;
+      gap: 12px;
+    }
+    .edit-modal button {
+      flex: 1;
+      padding: 12px;
+    }
   </style>
 </head>
 <body>
@@ -143,56 +259,196 @@
   <header>Утренняя рутина — 17 января 2026</header>
 
   <div class="current-task">
-    <div class="time">Пробуждение подтверждено в 07:15</div>
-    <h2>Поставить кофе ☕</h2>
+    <div class="time" id="timeInfo">Пробуждение подтверждено в 07:15</div>
+    <h2 id="taskTitle">Поставить кофе ☕</h2>
 
     <div class="buttons">
-      <button class="btn-confirm" onclick="updateTask(0, 'done')">Подтвердить</button>
-      <button class="btn-skip"    onclick="updateTask(0, 'skipped')">Отклонить</button>
-      <button class="btn-edit"    onclick="alert('Переписать задачу\n(в этой версии — просто заглушка)')">Переписать</button>
+      <button class="btn-confirm" onclick="confirmTask()">✓ Подтвердить</button>
+      <button class="btn-skip" onclick="skipTask()">⊘ Отклонить</button>
+      <button class="btn-edit" onclick="openEditModal()">✎ Переписать</button>
     </div>
   </div>
 
   <div class="side-drawer" id="drawer">
     <div class="drawer-header">План дня</div>
-    <div class="task-list">
-      <div class="task-item status-current">1. Поставить кофе ☕</div>
-      <div class="task-item status-todo">2. Зарядка 10 мин 🏋️‍♂️</div>
-      <div class="task-item status-todo">3. Приготовить завтрак 🍳</div>
-      <div class="task-item status-todo">4. Душ и сборы 🚿</div>
-      <div class="task-item status-todo">5. Выход из дома 🏠→🚶</div>
+    <div class="task-list" id="taskList">
+      <div class="task-item status-current" data-index="0">1. Поставить кофе ☕</div>
+      <div class="task-item status-todo" data-index="1">2. Зарядка 10 мин 🏋️‍♂️</div>
+      <div class="task-item status-todo" data-index="2">3. Приготовить завтрак 🍳</div>
+      <div class="task-item status-todo" data-index="3">4. Душ и сборы 🚿</div>
+      <div class="task-item status-todo" data-index="4">5. Выход из дома 🏠→🚶</div>
     </div>
   </div>
 
   <div class="overlay" id="overlay" onclick="closeDrawer()"></div>
 
+  <!-- Тост уведомление -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Экран завершения -->
+  <div class="completed-overlay" id="completedOverlay">
+    <h1>🎉 Отлично!</h1>
+    <p>Все задачи выполнены!</p>
+  </div>
+
+  <!-- Модальное окно редактирования -->
+  <div class="edit-modal" id="editModal">
+    <h3>Переписать задачу</h3>
+    <input type="text" id="editInput" placeholder="Введите новый текст задачи">
+    <div class="edit-modal-buttons">
+      <button class="btn-skip" onclick="closeEditModal()">Отмена</button>
+      <button class="btn-confirm" onclick="saveEdit()">Сохранить</button>
+    </div>
+  </div>
+
   <script>
     const drawer = document.getElementById('drawer');
     const overlay = document.getElementById('overlay');
-    const tasks = document.querySelectorAll('.task-item');
+    const toast = document.getElementById('toast');
+    const taskTitle = document.getElementById('taskTitle');
+    const timeInfo = document.getElementById('timeInfo');
+    const completedOverlay = document.getElementById('completedOverlay');
+    const editModal = document.getElementById('editModal');
+    const editInput = document.getElementById('editInput');
+    const taskList = document.getElementById('taskList');
+    
+    let currentTaskIndex = 0;
+    const tasks = Array.from(document.querySelectorAll('.task-item'));
 
-    function openDrawer() { drawer.classList.add('open'); overlay.classList.add('open'); }
-    function closeDrawer() { drawer.classList.remove('open'); overlay.classList.remove('open'); }
-
-    function updateTask(idx, status) {
-      tasks[idx].className = 'task-item status-' + status;
-      if (status === 'done' && idx + 1 < tasks.length) {
-        tasks[idx + 1].classList.add('status-current');
-      }
-      alert('Состояние обновлено!');
+    function openDrawer() { 
+      drawer.classList.add('open'); 
+      overlay.classList.add('open'); 
+    }
+    
+    function closeDrawer() { 
+      drawer.classList.remove('open'); 
+      overlay.classList.remove('open'); 
     }
 
+    function showToast(message, type = 'info') {
+      toast.textContent = message;
+      toast.className = `toast ${type}`;
+      toast.classList.add('show');
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2000);
+    }
+
+    function updateTaskDisplay() {
+      if (currentTaskIndex < tasks.length) {
+        const taskText = tasks[currentTaskIndex].textContent;
+        taskTitle.textContent = taskText.substring(3); // убираем номер
+        const now = new Date();
+        const time = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        timeInfo.textContent = `Текущее время: ${time}`;
+      }
+    }
+
+    function confirmTask() {
+      if (currentTaskIndex >= tasks.length) return;
+      
+      tasks[currentTaskIndex].className = 'task-item status-done';
+      showToast('✓ Задача выполнена!', 'success');
+      
+      taskTitle.style.animation = 'successPulse 0.5s';
+      setTimeout(() => { taskTitle.style.animation = ''; }, 500);
+      
+      currentTaskIndex++;
+      
+      if (currentTaskIndex < tasks.length) {
+        setTimeout(() => {
+          tasks[currentTaskIndex].classList.add('status-current');
+          updateTaskDisplay();
+        }, 300);
+      } else {
+        setTimeout(() => {
+          completedOverlay.classList.add('show');
+          setTimeout(() => {
+            completedOverlay.classList.remove('show');
+            resetTasks();
+          }, 3000);
+        }, 500);
+      }
+    }
+
+    function skipTask() {
+      if (currentTaskIndex >= tasks.length) return;
+      
+      tasks[currentTaskIndex].className = 'task-item status-skipped';
+      showToast('⊘ Задача отклонена', 'warning');
+      
+      currentTaskIndex++;
+      
+      if (currentTaskIndex < tasks.length) {
+        setTimeout(() => {
+          tasks[currentTaskIndex].classList.add('status-current');
+          updateTaskDisplay();
+        }, 300);
+      } else {
+        setTimeout(() => {
+          completedOverlay.classList.add('show');
+          setTimeout(() => {
+            completedOverlay.classList.remove('show');
+            resetTasks();
+          }, 3000);
+        }, 500);
+      }
+    }
+
+    function openEditModal() {
+      const currentText = taskTitle.textContent;
+      editInput.value = currentText;
+      editModal.classList.add('show');
+      overlay.classList.add('open');
+      editInput.focus();
+    }
+
+    function closeEditModal() {
+      editModal.classList.remove('show');
+      overlay.classList.remove('open');
+    }
+
+    function saveEdit() {
+      const newText = editInput.value.trim();
+      if (newText) {
+        taskTitle.textContent = newText;
+        const taskNumber = currentTaskIndex + 1;
+        tasks[currentTaskIndex].textContent = `${taskNumber}. ${newText}`;
+        tasks[currentTaskIndex].className = 'task-item status-current';
+        showToast('✎ Задача обновлена', 'info');
+      }
+      closeEditModal();
+    }
+
+    function resetTasks() {
+      currentTaskIndex = 0;
+      tasks.forEach((task, index) => {
+        task.className = index === 0 ? 'task-item status-current' : 'task-item status-todo';
+      });
+      updateTaskDisplay();
+    }
+
+    // Свайпы
     let touchStartX = 0, touchEndX = 0;
 
-    document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+    document.addEventListener('touchstart', e => { 
+      touchStartX = e.changedTouches[0].screenX; 
+    }, { passive: true });
+    
     document.addEventListener('touchend', e => {
       touchEndX = e.changedTouches[0].screenX;
       const diff = touchEndX - touchStartX;
-      if (diff < -60) openDrawer();     // справа → налево
-      else if (diff > 60) closeDrawer(); // слева → направо
+      if (diff < -60) openDrawer();
+      else if (diff > 60) closeDrawer();
     }, { passive: true });
 
-    // Регистрация Service Worker
+    // Enter в модалке
+    editInput.addEventListener('keypress', e => {
+      if (e.key === 'Enter') saveEdit();
+    });
+
+    // Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
@@ -200,6 +456,9 @@
           .catch(err => console.log('SW registration failed:', err));
       });
     }
+
+    // Инициализация
+    updateTaskDisplay();
   </script>
 </body>
-</html>
+    </html>
