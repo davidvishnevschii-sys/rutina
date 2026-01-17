@@ -2,9 +2,8 @@ const CACHE_NAME = 'rutina-v1';
 const urlsToCache = [
   './index.html',
   './manifest.json',
-  // Если добавишь свои иконки, добавь их сюда, например:
-  // './icon-192.png',
-  // './icon-512.png'
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 self.addEventListener('install', event => {
